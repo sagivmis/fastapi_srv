@@ -7,8 +7,8 @@ import motor.motor_asyncio
 from bson import ObjectId
 import os
 
-from pydantic import BaseModel, Field
-from typing import Optional
+from .models import OrderModel, ProductModel, UpdateProductModel
+
 
 app = FastAPI()
 
@@ -88,86 +88,62 @@ database = client.whist
 products_collection = database.get_collection('products')
 orders_collection = database.get_collection('orders')
 
+# ROUTES
 
 @app.get("/", tags=["root"])
 async def read_root() -> dict:
     return {"message": "Welcome to your shop."}
 
-
-### MODELS
-class OrderModel(BaseModel):
-    date: str = Field(...)
-    total: int = Field(...)
-    quantity: list = Field(...)
-    item_ids: list = Field(...)
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "products": [
-                    {
-                        "date": "12-31-1994",
-                        "total": 250,
-                        "quantity": [1, 1, 1],
-                        "item_ids": [1, 2, 3]
-                    },
-                ]
-            }
-        }
+#ORDERS
+@app.post('/orders', tags=['orders'])
+async def add_order(order: OrderModel = Body(...)):
+    try:
+        new_order = await db_add_order(order=dict(order))
+        return ResponseModel(new_order, 'Order added successfully.')
+    except Exception as e:
+        return ErrorResponseModel(error=e.__str__(), code=505, message='An error occurred.')
 
 
-class ProductModel(BaseModel):
-    _id: int = Field(...)
-    text: str = Field(...)
-    price: int = Field(...)
-    description: str = Field(...)
-    show_description: bool = Field(...)
-    image: bool = Field(...)
-    reminder: bool = Field(...)
-    url: str = Field(...)
-    quantity: int = Field(...)
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "id": 1,
-                "text": "T-shirt",
-                "price": 12,
-                "description": "T-shirt",
-                "showDescription": False,
-                "image": True,
-                "reminder": False,
-                "url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQnwBh410RwBSiaCOnUjohBG-WRrZjsAtv0BzZ5s-CYFyQUUEcmAYHw03jX8Nz012Gh39LF7Pr1&usqp=CAc",
-                "quantity": 1
-            }
-        }
+@app.get("/orders/{id}", tags=['orders'])
+async def get_order(id):
+    try:
+        order = await db_get_order(id)
+        if order:
+            return ResponseModel(order, "Order data retrieved successfully")
+        else:
+            return ErrorResponseModel("An error occurred.", 404, "Order doesn'exist.")
+    except Exception as e:
+        return ErrorResponseModel(error=e.__str__(), code=505, message='An error occurred.')
 
 
-class UpdateProductModel(BaseModel):
-    _id: Optional[int]
-    text: Optional[str]
-    price: Optional[int]
-    description: Optional[str]
-    show_description: Optional[bool]
-    image: Optional[bool]
-    reminder: Optional[bool]
-    url: Optional[str]
-    quantity: Optional[int]
+@app.patch("/orders/{id}", tags=['orders'])
+async def edit_order(id: str, order: OrderModel = Body(...)):
+    try:
+        updated_product = await db_edit_order(id, dict(order))
+        return ResponseModel(updated_product, f'Order with ID: {id} name update is successful')
+    except Exception as e:
+        return ErrorResponseModel(error=e.__str__(), code=505, message='An error occurred.')
 
-    class Config:
-        schema_extra = {
-            "example": {
-                "id": 1,
-                "text": "Flowery T-shirt",
-                "price": 12,
-                "description": "T-shirt with flower patterns",
-                "showDescription": False,
-                "image": True,
-                "reminder": False,
-                "url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQnwBh410RwBSiaCOnUjohBG-WRrZjsAtv0BzZ5s-CYFyQUUEcmAYHw03jX8Nz012Gh39LF7Pr1&usqp=CAc",
-                "quantity": 1
-            }
-        }
+
+@app.get("/orders", tags=['orders'])
+async def get_orders():
+    try:
+        orders = await db_get_orders()
+        return ResponseModel(orders, 'Products')
+    except Exception as e:
+        return ErrorResponseModel(error=e.__str__(), code=505, message='An error occurred.')
+
+
+@app.delete("/orders/{id}", tags=['orders'])
+async def delete_order(id):
+    try:
+        is_deleted = await db_delete_order(id)
+        if is_deleted:
+            return ResponseEmptyModel("Order deleted successfully")
+        else:
+            return ErrorResponseModel("An error occurred.", 404, "Order doesn'exist.")
+    except Exception as e:
+        return ErrorResponseModel(error=e.__str__(), code=505, message='An error occurred.')
 
 
 ### PRODUCT SECTION
@@ -220,7 +196,7 @@ async def db_edit_product(id, product):
 
 
 # ROUTES
-@app.post('/products')
+@app.post('/products', tags=['products'])
 async def add_product(product: ProductModel = Body(...)):
     try:
         new_product = await db_add_product(product=dict(product))
@@ -229,7 +205,7 @@ async def add_product(product: ProductModel = Body(...)):
         return ErrorResponseModel(error=e.__str__(), code=505, message='An error occurred.')
 
 
-@app.patch("/products/{id}")
+@app.patch("/products/{id}", tags=['products'])
 async def edit_product(id: str, product: ProductModel = Body(...)):
     try:
         updated_product = await db_edit_product(id, dict(product))
@@ -238,7 +214,7 @@ async def edit_product(id: str, product: ProductModel = Body(...)):
         return ErrorResponseModel(error=e.__str__(), code=505, message='An error occurred.')
 
 
-@app.get("/products/{id}")
+@app.get("/products/{id}", tags=['products'])
 async def get_product(id):
     try:
         product = await db_get_product(id)
@@ -250,7 +226,7 @@ async def get_product(id):
         return ErrorResponseModel(error=e.__str__(), code=505, message='An error occurred.')
 
 
-@app.delete("/products/{id}")
+@app.delete("/products/{id}", tags=['products'])
 async def delete_product(id):
     try:
         is_deleted = await db_delete_product(id)
@@ -262,7 +238,7 @@ async def delete_product(id):
         return ErrorResponseModel(error=e.__str__(), code=505, message='An error occurred.')
 
 
-@app.get("/products")
+@app.get("/products", tags=['products'])
 async def get_products():
     try:
         products = await db_get_products()
@@ -315,58 +291,6 @@ async def db_get_orders():
     async for order in orders_collection.find():
         orders.append(order_helper(order))
     return orders
-
-
-# ROUTES
-@app.post('/orders')
-async def add_order(order: OrderModel = Body(...)):
-    try:
-        new_order = await db_add_order(order=dict(order))
-        return ResponseModel(new_order, 'Order added successfully.')
-    except Exception as e:
-        return ErrorResponseModel(error=e.__str__(), code=505, message='An error occurred.')
-
-
-@app.get("/orders/{id}")
-async def get_order(id):
-    try:
-        order = await db_get_order(id)
-        if order:
-            return ResponseModel(order, "Order data retrieved successfully")
-        else:
-            return ErrorResponseModel("An error occurred.", 404, "Order doesn'exist.")
-    except Exception as e:
-        return ErrorResponseModel(error=e.__str__(), code=505, message='An error occurred.')
-
-
-@app.patch("/orders/{id}")
-async def edit_order(id: str, order: OrderModel = Body(...)):
-    try:
-        updated_product = await db_edit_order(id, dict(order))
-        return ResponseModel(updated_product, f'Order with ID: {id} name update is successful')
-    except Exception as e:
-        return ErrorResponseModel(error=e.__str__(), code=505, message='An error occurred.')
-
-
-@app.get("/orders")
-async def get_orders():
-    try:
-        orders = await db_get_orders()
-        return ResponseModel(orders, 'Products')
-    except Exception as e:
-        return ErrorResponseModel(error=e.__str__(), code=505, message='An error occurred.')
-
-
-@app.delete("/orders/{id}")
-async def delete_order(id):
-    try:
-        is_deleted = await db_delete_order(id)
-        if is_deleted:
-            return ResponseEmptyModel("Order deleted successfully")
-        else:
-            return ErrorResponseModel("An error occurred.", 404, "Order doesn'exist.")
-    except Exception as e:
-        return ErrorResponseModel(error=e.__str__(), code=505, message='An error occurred.')
 
 
 ### RESPONSE MODELS
