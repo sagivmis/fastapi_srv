@@ -79,7 +79,7 @@ app.add_middleware(
 ### DB
 
 MONGO_URL = os.getenv('MONGO_URL',
-                      'mongodb+srv://admin:Sn59595959@cluster0-shard-00-01.t7aoo.mongodb.net/myFirstDatabase?retryWrites=true&w=majority')
+                      'mongodb+srv://admin:Sn59595959@cluster0.t7aoo.mongodb.net/myFirstDatabase?retryWrites=true&w=majority')
 
 client = motor.motor_asyncio.AsyncIOMotorClient(MONGO_URL)
 
