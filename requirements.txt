@@ -72,7 +72,6 @@ PyDispatcher==2.0.5
 Pygments==2.8.1
 PyJWT==1.7.1
 pymongo==3.11.3
-pyOpenSSL==20.0.1
 pyparsing==2.4.7
 pyrsistent==0.17.3
 python-dateutil==2.8.1
